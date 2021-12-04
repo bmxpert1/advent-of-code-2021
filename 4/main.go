@@ -91,6 +91,7 @@ func main() {
 	// read boards from txt
 	boards := []*Board{}
 	file, _ := os.Open("boards.txt")
+	defer file.Close()
 	scanner := bufio.NewScanner(file)
 
 	// var genBoard Board
