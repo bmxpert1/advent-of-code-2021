@@ -115,16 +115,68 @@ func sim3(days int) int64 {
 	return fishCount
 }
 
+// try just creating a hash of day=>fish_count
+func sim4(days int) int64 {
+	// read initial ages from json
+	var ages []int
+	content, _ := ioutil.ReadFile("fish.json")
+	json.Unmarshal([]byte(content), &ages)
+
+	createCountSet := func() map[int]int64 {
+		return map[int]int64{
+			0: 0,
+			1: 0,
+			2: 0,
+			3: 0,
+			4: 0,
+			5: 0,
+			6: 0,
+			7: 0,
+			8: 0,
+		}
+	}
+
+	counts := createCountSet()
+
+	// load the initial counts
+	for _, age := range ages {
+		counts[age] += 1
+	}
+
+	for i := 0; i < days; i++ {
+		tempCounts := createCountSet()
+		for d := 0; d <= 8; d++ {
+			if d == 0 {
+				// spawns
+				tempCounts[8] = counts[d]
+				// and wrap back to 6
+				tempCounts[6] = counts[d]
+			} else {
+				tempCounts[d-1] += counts[d]
+			}
+		}
+
+		counts = tempCounts
+	}
+
+	var fishCount int64
+	fishCount = 0
+	for _, cnt := range counts {
+		fishCount += cnt
+	}
+	return fishCount
+}
+
 func main() {
 	/////////////////////////////
 	// challenge 1
 	//
 	// run sim for 80 days
-	fmt.Println(sim(80))
+	fmt.Println(sim4(80))
 
 	/////////////////////////////
 	// challenge 2
 	//
 	// run sim for 256 days
-	fmt.Println(sim(256))
+	fmt.Println(sim4(256))
 }
