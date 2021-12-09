@@ -24,10 +24,6 @@ type Digit struct {
 	segments string
 }
 
-func (d *Digit) segmentTokens() []string {
-	return strings.Split(d.segments, "")
-}
-
 func (d *Digit) segmentCount() int {
 	return len(d.segments)
 }
@@ -107,7 +103,7 @@ func segmentCountDigitMap() map[int][]*Digit {
 func main() {
 	// read entries from txt
 	entries := []*Entry{}
-	file, _ := os.Open("entries.txt")
+	file, _ := os.Open("../entries.txt")
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
 
