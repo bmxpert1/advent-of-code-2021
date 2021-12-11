@@ -8,19 +8,13 @@ import (
 )
 
 type OctoTable struct {
-	octopi [][]*Octo
-	// originalOctopi [][]*Octo
+	octopi  [][]*Octo
 	width   int
 	length  int
 	flashes int
 }
 
 func NewOctoTable(octopi [][]*Octo) *OctoTable {
-	// octoCopy := make([][]*Octo, len(octopi))
-	// for i := range octopi {
-	// 	octoCopy[i] = make([]*Octo, len(octopi[i]))
-	// 	copy(octoCopy[i], octopi[i])
-	// }
 	tbl := &OctoTable{octopi, len(octopi[0]), len(octopi), 0}
 	for y, octoRow := range tbl.octopi {
 		for x, octo := range octoRow {
@@ -31,19 +25,6 @@ func NewOctoTable(octopi [][]*Octo) *OctoTable {
 	}
 	return tbl
 }
-
-// func (t *OctoTable) reset() {
-// 	octoCopy := make([][]*Octo, len(t.originalOctopi))
-// 	for i := range t.originalOctopi {
-// 		octoCopy[i] = make([]*Octo, len(t.originalOctopi[i]))
-// 		copy(octoCopy[i], t.originalOctopi[i])
-// 	}
-
-// 	t.octopi = octoCopy
-// 	t.flashes = 0
-
-// 	// spew.Dump(t)
-// }
 
 func (t *OctoTable) octoAt(x int, y int) *Octo {
 	if y < 0 || x < 0 || y > t.length-1 || x > t.width-1 {
