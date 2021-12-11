@@ -125,15 +125,20 @@ func (o *Octo) flash() {
 
 func main() {
 	// read input from txt
+	lines := []string{}
 	octos := [][]*Octo{}
 	file, _ := os.Open("input.txt")
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	for _, line := range lines {
 		octoLine := []*Octo{}
 
-		for _, nrg := range scanner.Text() {
+		for _, nrg := range line {
 			energy, _ := strconv.Atoi(string(nrg))
 			octoLine = append(octoLine, &Octo{
 				energy:  energy,
@@ -161,13 +166,11 @@ func main() {
 	// challenge 2
 	//
 	octos = [][]*Octo{}
-	file, _ = os.Open("input.txt")
-	scanner = bufio.NewScanner(file)
 
-	for scanner.Scan() {
+	for _, line := range lines {
 		octoLine := []*Octo{}
 
-		for _, nrg := range scanner.Text() {
+		for _, nrg := range line {
 			energy, _ := strconv.Atoi(string(nrg))
 			octoLine = append(octoLine, &Octo{
 				energy:  energy,
