@@ -118,9 +118,11 @@ func main() {
 	for _, path := range paths {
 		uniqPaths[path] = path
 	}
-	paths = []string{}
+	paths = make([]string, len(uniqPaths))
+	i := 0
 	for path := range uniqPaths {
-		paths = append(paths, path)
+		paths[i] = path
+		i++
 	}
 
 	fmt.Println(len(paths))
