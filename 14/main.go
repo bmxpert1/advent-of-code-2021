@@ -3,76 +3,47 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 )
-
-const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 type Pair struct {
 	orig  string
 	value string
 }
 
-func run(template string, steps int, mods *map[string]string) string {
+func run(template string, steps int, mods *map[string]string, countMap *map[string]int) {
 	pairs := []*Pair{}
+
+	// register initial template characters into countMap
+	for _, c := range template {
+		(*countMap)[string(c)]++
+	}
 
 	for i := 0; i < len(template)-1; i++ {
 		pairs = append(pairs, &Pair{template[i : i+2], template[i : i+2]})
 	}
 
-	// targetCount := len(pairs)
-	// for i := 0; i < steps-1; i++ {
-	// 	targetCount += targetCount
-	// }
-
-	// fmt.Printf("target count: %v\n", targetCount)
-
-	final := ""
-	// currentCount := 0
-
-	for i, pair := range pairs {
-		fmt.Println(i)
-		// final += pair.runPair(mods, targetCount, &currentCount, i == 0)
-		fmt.Printf("running pair: %v\n", pair.orig)
-		supplement := pair.runPair(mods, steps, 0, i == 0)
-		fmt.Printf("finished pair: %v, %v\n", pair.orig, supplement)
-		final += supplement
+	for _, pair := range pairs {
+		pair.runPair(mods, countMap, steps, 0)
 	}
-
-	return final
 }
 
-// func (p *Pair) runPair(mods *map[string]string, targetCount int, currentCount *int, first bool) string {
-func (p *Pair) runPair(mods *map[string]string, targetSteps int, currentStep int, first bool, aggString string) string {
+func (p *Pair) runPair(mods *map[string]string, countMap *map[string]int, targetSteps int, currentStep int) {
 	if currentStep >= targetSteps {
-		return ""
+		return
 	}
 
-	fmt.Printf("running inner pair: %v, %v, step: %v\n", p.orig, first, currentStep)
-	final := ""
+	p.inject(mods, countMap)
 
-	p.inject(mods)
-	final = p.value
-
-	for i, pair := range p.split() {
-		supplement := pair.runPair(mods, targetSteps, currentStep+1, first && i == 0)
-		final += supplement
-		if p.orig == "NN" {
-			fmt.Printf("*** %v [%v]\n", supplement, final)
-		}
+	for _, pair := range p.split() {
+		pair.runPair(mods, countMap, targetSteps, currentStep+1)
 	}
-
-	if !first && len(final) > 0 {
-		final = final[1:]
-	}
-
-	fmt.Printf("finished inner pair: %v, %v\n", p.orig, final)
-
-	return final
 }
 
-func (p *Pair) inject(mods *map[string]string) {
+func (p *Pair) inject(mods *map[string]string, countMap *map[string]int) {
+	(*countMap)[(*mods)[p.value]]++
 	p.value = string(p.value[0]) + (*mods)[p.value] + string(p.value[1])
 }
 
@@ -107,91 +78,50 @@ func main() {
 	// challenge 1
 	//
 	currentTemplate := template
+	countMap := map[string]int{}
 
-	fmt.Println(run(currentTemplate, 2, &mods))
+	run(currentTemplate, 10, &mods, &countMap)
 
-	// for step := 0; step < 10; step++ {
-	// 	// generate pairs to lookup
-	// 	pairs := []string{}
+	countMin, countMax := math.MaxInt64, math.MinInt64
 
-	// 	for i := 0; i < len(currentTemplate)-1; i++ {
-	// 		pairs = append(pairs, currentTemplate[i:i+2])
-	// 	}
+	for _, v := range countMap {
+		if v == 0 {
+			continue
+		}
 
-	// 	newTemplate := ""
+		if v < countMin {
+			countMin = v
+		}
+		if v > countMax {
+			countMax = v
+		}
+	}
 
-	// 	for i, pair := range pairs {
-	// 		if i == 0 {
-	// 			newTemplate += string(pair[0])
-	// 		}
-	// 		newTemplate += mods[pair] + string(pair[1])
-	// 	}
-
-	// 	currentTemplate = newTemplate
-	// }
-
-	// countMap := map[string]int{}
-	// countMin, countMax := math.MaxInt64, math.MinInt64
-
-	// for _, ltr := range strings.Split(letters, "") {
-	// 	countMap[ltr] = strings.Count(currentTemplate, ltr)
-	// 	if countMap[ltr] < countMin && countMap[ltr] != 0 {
-	// 		countMin = countMap[ltr]
-	// 	}
-	// 	if countMap[ltr] > countMax {
-	// 		countMax = countMap[ltr]
-	// 	}
-	// }
-
-	// fmt.Println(countMax - countMin)
+	fmt.Println(countMax - countMin)
 
 	///////////////////////////////
 	// challenge 2
 	//
 	// same thing but do it 40 times
-	// currentTemplate = template
+	currentTemplate = template
+	countMap = map[string]int{}
 
-	// for step := 0; step < 40; step++ {
-	// 	fmt.Printf("%v A\n", step)
+	run(currentTemplate, 40, &mods, &countMap)
 
-	// 	// generate pairs to lookup
-	// 	pairs := make([]string, len(currentTemplate)-1)
+	countMin, countMax = math.MaxInt64, math.MinInt64
 
-	// 	for i := 0; i < len(currentTemplate)-1; i++ {
-	// 		pairs[i] = currentTemplate[i : i+2]
-	// 	}
+	for _, v := range countMap {
+		if v == 0 {
+			continue
+		}
 
-	// 	fmt.Printf("%v B, %v\n", step, len(pairs))
+		if v < countMin {
+			countMin = v
+		}
+		if v > countMax {
+			countMax = v
+		}
+	}
 
-	// 	parts := make([]string, len(pairs))
-
-	// 	for i, pair := range pairs {
-	// 		supplement := ""
-	// 		if i == 0 {
-	// 			supplement += string(pair[0])
-	// 		}
-	// 		supplement += mods[pair] + string(pair[1])
-
-	// 		parts[i] = supplement
-	// 	}
-
-	// 	fmt.Printf("%v C, %v\n", step, uintptr(len(pairs))*reflect.TypeOf(pairs).Elem().Size())
-
-	// 	currentTemplate = strings.Join(parts, "")
-	// }
-
-	// countMap = map[string]int{}
-	// countMin, countMax = math.MaxInt64, math.MinInt64
-
-	// for _, ltr := range strings.Split(letters, "") {
-	// 	countMap[ltr] = strings.Count(currentTemplate, ltr)
-	// 	if countMap[ltr] < countMin && countMap[ltr] != 0 {
-	// 		countMin = countMap[ltr]
-	// 	}
-	// 	if countMap[ltr] > countMax {
-	// 		countMax = countMap[ltr]
-	// 	}
-	// }
-
-	// fmt.Println(countMax - countMin)
+	fmt.Println(countMax - countMin)
 }
