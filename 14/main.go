@@ -79,10 +79,10 @@ func main() {
 		fmt.Println(step)
 
 		// generate pairs to lookup
-		pairs := []string{}
+		pairs := make([]string, len(currentTemplate)-1)
 
 		for i := 0; i < len(currentTemplate)-1; i++ {
-			pairs = append(pairs, currentTemplate[i:i+2])
+			pairs[i] = currentTemplate[i : i+2]
 		}
 
 		newTemplate := ""
