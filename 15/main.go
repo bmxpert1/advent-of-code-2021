@@ -10,6 +10,29 @@ import (
 	"github.com/fatih/color"
 )
 
+var distAdj = map[int][][][2]int{
+	2: {
+		{{0, 1}},
+		{{1, 0}},
+	},
+	3: {
+		{{0, 1}, {0, 2}},
+		{{0, 1}, {1, 1}},
+		{{1, 0}, {1, 1}},
+		{{1, 0}, {2, 0}},
+	},
+	4: {
+		{{0, 1}, {0, 2}, {0, 3}},
+		{{0, 1}, {0, 2}, {1, 2}},
+		{{0, 1}, {1, 1}, {1, 2}},
+		{{0, 1}, {1, 1}, {2, 1}},
+		{{1, 0}, {1, 1}, {1, 2}},
+		{{1, 0}, {1, 1}, {2, 1}},
+		{{1, 0}, {2, 0}, {2, 1}},
+		{{1, 0}, {2, 0}, {3, 0}},
+	},
+}
+
 func sum(nums []int) int {
 	sum := 0
 	for _, i := range nums {
@@ -92,18 +115,38 @@ func (g *Grid) move(target [2]int) {
 	g.position = bestPos
 	g.entered[g.position] = true
 
-	g.print()
-
 	if g.position != target {
 		g.move(target)
 	}
 }
 
-func (g *Grid) genOptions(from [2]int, distance int) (opts [][]int) {
-	// add ourself
-	opts = append(opts, []int{g.cellAt(from[0], from[1])})
+func (g *Grid) genOptions(from [2]int, maxDistance int) (opts [][]int) {
+	if maxDistance == 1 {
+		return [][]int{{g.cellAt(from[0], from[1])}}
+	}
 
-	return opts
+	for _, adjs := range distAdj[maxDistance] {
+		opt := []int{}
+		// add ourself
+		opt = append(opt, g.cellAt(from[0], from[1]))
+
+		for _, adj := range adjs {
+			if c := g.cellAt(from[0]+adj[0], from[1]+adj[1]); c != -1 {
+				opt = append(opt, c)
+			}
+		}
+
+		// make sure we [maxDistance] count
+		if len(opt) == maxDistance {
+			opts = append(opts, opt)
+		}
+	}
+
+	if len(opts) == 0 {
+		return g.genOptions(from, maxDistance-1)
+	} else {
+		return opts
+	}
 }
 
 func (g *Grid) sumEntered() int {
@@ -119,7 +162,7 @@ func (g *Grid) sumEntered() int {
 func main() {
 	cells := [][]int{}
 
-	file, _ := os.Open("example_input.txt")
+	file, _ := os.Open("input.txt")
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
 
@@ -136,7 +179,9 @@ func main() {
 
 	grid := NewGrid(cells)
 
-	grid.move([2]int{9, 9})
+	grid.move([2]int{grid.width - 1, grid.height - 1})
+
+	grid.print()
 
 	fmt.Println(grid.sumEntered())
 }
