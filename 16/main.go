@@ -39,8 +39,6 @@ type Packet struct {
 }
 
 func NewPacket(bits string, proc *Processor) (packet *Packet) {
-	// fmt.Println("new packet with", bits)
-
 	packet = &Packet{
 		bits:       bits,
 		subPackets: []*Packet{},
@@ -56,6 +54,13 @@ func (p *Packet) version() int {
 	v, _ := strconv.ParseInt(p.bits[0:3], 2, 64)
 	return int(v)
 }
+func (p *Packet) versionSum() int {
+	sum := p.version()
+	for _, packet := range p.subPackets {
+		sum += packet.versionSum()
+	}
+	return sum
+}
 func (p *Packet) typeId() int {
 	v, _ := strconv.ParseInt(p.bits[3:6], 2, 64)
 	return int(v)
@@ -68,27 +73,76 @@ func (p *Packet) process() {
 		p.loadOperatorPackets()
 	}
 }
-func (p *Packet) loadLiteralGroups() {
-	// fmt.Println("literal packet")
-
-	loaded := false
-	pos := 6
-
-	for !loaded {
-		p.bits += p.proc.nextGroupOf(5)
-
-		if len(p.bits) >= pos+5 {
-			grp := p.bits[pos : pos+5]
-
-			// fmt.Println("grp: ", grp)
-
-			if grp[0] == '0' {
-				loaded = true
-			} else {
-				pos += 5
+func (p *Packet) value() int {
+	switch p.typeId() {
+	case 4:
+		return p.literalValue()
+	case 0:
+		// sum packets - their value is the sum of the values of their sub-packets.
+		// If they only have a single sub-packet, their value is the value of the sub-packet.
+		sum := 0
+		for _, packet := range p.subPackets {
+			sum += packet.value()
+		}
+		return sum
+	case 1:
+		// product packets - their value is the result of multiplying together the values of their sub-packets.
+		// If they only have a single sub-packet, their value is the value of the sub-packet.
+		vals := []int{}
+		for _, packet := range p.subPackets {
+			vals = append(vals, packet.value())
+		}
+		product := vals[0]
+		for i := 1; i < len(vals); i++ {
+			product = product * vals[i]
+		}
+		return product
+	case 2:
+		// minimum packets - their value is the minimum of the values of their sub-packets.
+		min := math.MaxInt64
+		for _, packet := range p.subPackets {
+			val := packet.value()
+			if val < min {
+				min = val
 			}
 		}
+		return min
+	case 3:
+		// maximum packets - their value is the maximum of the values of their sub-packets.
+		max := math.MinInt64
+		for _, packet := range p.subPackets {
+			val := packet.value()
+			if val > max {
+				max = val
+			}
+		}
+		return max
+	case 5:
+		// greater than packets - their value is 1 if the value of the first sub-packet is greater than the value of the second sub-packet; otherwise, their value is 0.
+		// These packets always have exactly two sub-packets.
+		if p.subPackets[0].value() > p.subPackets[1].value() {
+			return 1
+		} else {
+			return 0
+		}
+	case 6:
+		// less than packets - their value is 1 if the value of the first sub-packet is less than the value of the second sub-packet; otherwise, their value is 0.
+		// These packets always have exactly two sub-packets.
+		if p.subPackets[0].value() < p.subPackets[1].value() {
+			return 1
+		} else {
+			return 0
+		}
+	case 7:
+		// equal to packets - their value is 1 if the value of the first sub-packet is equal to the value of the second sub-packet; otherwise, their value is 0.
+		// These packets always have exactly two sub-packets.
+		if p.subPackets[0].value() == p.subPackets[1].value() {
+			return 1
+		} else {
+			return 0
+		}
 	}
+	return math.MinInt64
 }
 func (p *Packet) literalValue() int {
 	if p.typeId() == 4 {
@@ -104,6 +158,24 @@ func (p *Packet) literalValue() int {
 		return int(dec)
 	} else {
 		return -1
+	}
+}
+func (p *Packet) loadLiteralGroups() {
+	loaded := false
+	pos := 6
+
+	for !loaded {
+		p.bits += p.proc.nextGroupOf(5)
+
+		if len(p.bits) >= pos+5 {
+			grp := p.bits[pos : pos+5]
+
+			if grp[0] == '0' {
+				loaded = true
+			} else {
+				pos += 5
+			}
+		}
 	}
 }
 func (p *Packet) loadOperatorPackets() {
@@ -124,7 +196,6 @@ func (p *Packet) loadOperatorPackets() {
 				subPacketLength, _ = strconv.ParseInt(next15, 2, 64)
 				pos += 15
 				loaded = true
-				// fmt.Printf("operator packet 0: [%v]\n", subPacketLength)
 			} else {
 				p.bits += p.proc.nextGroup()
 			}
@@ -156,20 +227,17 @@ func (p *Packet) loadOperatorPackets() {
 				numSubPackets, _ = strconv.ParseInt(next11, 2, 64)
 				pos += 11
 				loaded = true
-				// fmt.Printf("operator packet 1: [%v]\n", numSubPackets)
 			} else {
 				p.bits += p.proc.nextGroup()
 			}
 		}
 
-		startingPacketCount := len(allPackets)
+		startingPacketCount := len(p.subPackets)
 
-		for len(allPackets) < startingPacketCount+int(numSubPackets) {
+		for len(p.subPackets) < startingPacketCount+int(numSubPackets) {
 			tempPacket := NewPacket(p.proc.nextGroupOf(6), p.proc)
-			// fmt.Println("o0", tempPacket.bits)
 			tempPacket.process()
 			p.subPackets = append(p.subPackets, tempPacket)
-			// fmt.Printf("O1 %v [%v]\n", tempPacket.bits, tempPacket.literalValue())
 		}
 	}
 }
@@ -181,7 +249,6 @@ type Processor struct {
 }
 
 func NewProcessor(bits string) *Processor {
-	// fmt.Println("new processor with", bits)
 	return &Processor{
 		bits:    bits,
 		pos:     0,
@@ -190,13 +257,11 @@ func NewProcessor(bits string) *Processor {
 }
 
 func (p *Processor) process() {
-	for p.pos+6 < len(p.bits) {
+	for p.pos+7 < len(p.bits) {
 		packet := NewPacket(p.nextGroupOf(6), p)
 		p.packets = append(p.packets, packet)
 		packet.process()
-		// fmt.Printf("P %v [%v]\n", packet.bits, packet.literalValue())
 	}
-	// fmt.Println("end processor with", p.bits)
 }
 func (p *Processor) nextGroupOf(size int) string {
 	grp := p.bits[p.pos:int(math.Min(float64(p.pos+size), float64(len(p.bits))))]
@@ -208,7 +273,6 @@ func (p *Processor) nextGroup() string {
 }
 
 func main() {
-	// TODO 5 and 6 arent working
 	input, _ := ioutil.ReadFile("input.txt")
 	bits := ""
 	for _, hex := range input {
@@ -218,11 +282,6 @@ func main() {
 	proc = NewProcessor(bits)
 	proc.process()
 
-	versionSum := 0
-
-	for _, packet := range allPackets {
-		versionSum += packet.version()
-	}
-
-	fmt.Println(versionSum)
+	fmt.Println(proc.packets[0].versionSum())
+	fmt.Println(proc.packets[0].value())
 }
